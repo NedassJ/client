@@ -8,14 +8,19 @@ const App = () => {
   const [gameId, setGameId] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [movesLeft, setMovesLeft] = useState(25);
+  const [hasWon, setHasWon] = useState(false);
+  const [hasSunken, setHasSunken] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const startGame = async () => {
+    setErrorMessage(""); 
     try {
       const { data } = await axios.post('http://localhost:5000/start');
       setGameState(data.grid);
       setGameId(data.gameId);
-      setGameStarted(true); // Set the game as started
-      setMovesLeft(25); // Reset moves when a new game starts
+      setGameStarted(true); 
+      hasWon(false);
+      setMovesLeft(25); 
       console.log("Game started with ID:", data.gameId);
     } catch (error) {
       console.error('Error starting game:', error);
@@ -23,17 +28,39 @@ const App = () => {
   };
 
   const makeGuess = async (x, y) => {
+    if (!gameStarted) {
+      setErrorMessage("Spauskite [PRADĖTI ŽAIDIMĄ] norėdami žaisti");
+      return;
+  }
+  setErrorMessage(""); 
     try {
       const { data } = await axios.post('http://localhost:5000/guess', {
         gameId,
         x,
         y,
       });
+      setHasSunken(false);
       setGameState(data.grid);
-      setMovesLeft(data.movesLeft); 
-      console.log(data.message)
+      setMovesLeft(data.movesLeft);
+      if(data.message === 'WON')
+      {
+        console.log("Laimeta")
+        setHasWon(true);
+        setGameStarted(false);
+      }
+      if(data.message === 'OVER')
+      {
+        console.log("Game over")
+        window.location.reload(false);
+      }
+      if(data.message === 'Laivas paskandintas!')
+      {
+        console.log("Visas laivas paskandintas")
+        setHasSunken(true);
+      }
     } catch (error) {
       console.error('Error making guess:', error);
+      setErrorMessage("Error");
     }
   };
 
@@ -51,6 +78,21 @@ const App = () => {
           Žaidimas prasidėjo! Liko ėjimų: {movesLeft}
         </Alert>
       )}
+      {hasSunken && (
+        <Alert severity="success" sx={{marginTop: 2}}>
+          Paskandintas pilnas laivas!
+        </Alert>
+      )}
+      {hasWon && (
+        <Alert severity="success" sx={{marginTop: 2}}>
+          Žaidimas baigėsi, jūs laimėjote!
+        </Alert>
+      )}
+      {errorMessage && (
+            <Alert severity="error" sx={{marginTop: 2}}>
+                {errorMessage}
+            </Alert>
+        )}
     </Box>
   );
 };
